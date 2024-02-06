@@ -5,29 +5,30 @@ import * as cron from "node-cron";
 import update from "./worker/cron_worker.ts";
 
 const compList: CronInput[] = [];
+const uniqueIds = new Set<string>();
 
-cron.schedule("* * * * *", () => {
-  update(compList);
+cron.schedule("* * * * *", async () => {
+  await updateComps();
 });
 
-async function addInitialComps() {
-  const comps = await prisma.competition
-    .findMany()
-    .then(async (competitions) => {
-      competitions.forEach(async (competition) => {
-        if (competition.id == null) {
-          return false;
-        }
-
-        if (competition.currentlyUsed) {
-          await compList.push({
-            id: competition.compSlug,
-          });
-        }
-      });
-    });
+async function updateComps() {
+  const competitions = await prisma.competition.findMany();
+  const activeComps = competitions.filter(
+    (competition) => competition.currentlyUsed && competition.id != null
+  );
+  compList.length = 0;
+  uniqueIds.clear();
+  await Promise.all(
+    activeComps.map(async (competition) => {
+      if (!uniqueIds.has(competition.compSlug)) {
+        compList.push({
+          id: competition.compSlug,
+        });
+        uniqueIds.add(competition.compSlug);
+      }
+    })
+  );
+  update(compList);
 }
-
-addInitialComps();
 
 logger.success("Started");
