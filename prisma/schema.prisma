@@ -1,0 +1,39 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+    url       = env("POSTGRES_PRISMA_URL")
+    directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+model User {
+    id         Int           @id @default(autoincrement())
+    email      String        @unique
+    name       String
+    password   String
+    savedComps Competition[]
+}
+
+model Competition {
+    id            Int     @id @default(autoincrement())
+    compSlug      String  @unique
+    compName      String
+    teams         Team[]
+    users         User[]
+    userId        Int?
+    currentlyUsed Boolean
+}
+
+model Team {
+    id            Int          @id @unique
+    competition   Competition? @relation(fields: [competitionId], references: [id])
+    competitionId Int?
+    opr           Int
+    autoPoints    Int
+    telePoints    Int
+    endgamePoints Int
+    placing       Int
+    teamName      String
+}
